@@ -10,6 +10,8 @@ using Random = UnityEngine.Random;
 
 public class GameManager : MonoBehaviour
 {
+    public static GameManager instance;
+    
     public Dictionary<string, int> vocabForPurchase1;
 
     public Dictionary<string, int> blankingVocab1;
@@ -18,9 +20,11 @@ public class GameManager : MonoBehaviour
 
     public int blankingVocabRecoveryAmount = 2;
 
-    public static int mentalCapacity;
+    [HideInInspector] public int mentalCapacity;
 
     public int initialMentalCapacity = 3;
+
+    private int currentSpeakingSentence = 0;
 
     private GameObject[] purchaseButton;
 
@@ -29,6 +33,8 @@ public class GameManager : MonoBehaviour
     private TextMeshProUGUI mentalCapacityText;
 
     private TextMeshProUGUI speechBox;
+
+    private TextMeshProUGUI targetSentenceText;
 
     private RectTransform progressBar;
 
@@ -41,6 +47,11 @@ public class GameManager : MonoBehaviour
     private List<string> vocabSpoken;
 
     // Start is called before the first frame update
+    private void Awake()
+    {
+        instance = this;
+    }
+
     void Start()
     {
         mentalCapacity = initialMentalCapacity;
@@ -75,6 +86,7 @@ public class GameManager : MonoBehaviour
         
         mentalCapacityText = GameObject.FindWithTag("Mental Capacity Text").GetComponent<TextMeshProUGUI>();
         speechBox = GameObject.Find("Speech Box").GetComponent<TextMeshProUGUI>();
+        targetSentenceText = GameObject.Find("Target Sentence").GetComponent<TextMeshProUGUI>();
         
         Refresh();
         mentalCapacity += 1;
@@ -92,6 +104,7 @@ public class GameManager : MonoBehaviour
         if (timeLeft <= 0)
         {
             Debug.Log("Game Over!");
+            SceneManager.LoadScene(1);
             return;
         }
         CountDownTime();
@@ -134,13 +147,13 @@ public class GameManager : MonoBehaviour
     private void AddBlankingVocabs()
     {
         blankingVocab1.Add("like", 0);
-        blankingVocab1.Add("for example", 0);
+        // blankingVocab1.Add("for example", 0);
         blankingVocab1.Add("uhh", 0);
         blankingVocab1.Add("I mean", 0);
         blankingVocab1.Add("well", 0);
         blankingVocab1.Add("you know", 0);
         blankingVocab1.Add("hmm", 0);
-        blankingVocab1.Add("let me see", 0);
+        // blankingVocab1.Add("let me see", 0);
         blankingVocab1.Add("so", 0);
         blankingVocab1.Add("okay", 0);
         blankingVocab1.Add("sorry", 0);
@@ -161,11 +174,66 @@ public class GameManager : MonoBehaviour
         {
             speechBox.text += vocab + " ";
         }
+        
     }
 
     void DisplayTargetSentence()
     {
+        TextAsset speechText = Resources.Load<TextAsset>("speech1");
+        string[] speechLines = speechText.text.Split("\n");
+        List<string> vocabsInLine = new List<string>();
+        List<string> vocabSpokenWithoutBlanking = new List<string>();
+        // foreach (string vocab in vocabSpoken)
+        // {
+        //     if (blankingVocab1.ContainsKey(vocab))
+        //     {
+        //         vocabSpoken.Remove(vocab);
+        //     }
+        // }
+        //
+        // vocabSpokenWithoutBlanking = vocabSpoken;
+        targetSentenceText.text = speechLines[currentSpeakingSentence];
         
+        string[] vocabs = speechLines[currentSpeakingSentence].Split(" ");
+        for (int i = 0; i < vocabs.Length; i++) 
+        {
+            string vocab = vocabs[i];
+            if (vocab.Contains(","))
+            { 
+                vocab = vocab.Substring(0, vocab.Length - 1);
+                // Debug.Log(vocab);
+            }
+                
+            if (vocab.Contains("."))
+            {
+                vocab = vocab.Substring(0, vocab.Length - 2);
+                // Debug.Log(vocab);
+            }
+            vocabsInLine.Add(vocab.ToLower());
+        }
+        
+        if (vocabsInLine.SequenceEqual(vocabSpoken, StringComparer.Ordinal))
+        {
+            currentSpeakingSentence += 1;
+            vocabSpoken.Clear();
+            speechBox.text = "";
+        }
+
+        if (currentSpeakingSentence >= speechLines.Length)
+        {
+            Debug.Log("A successful speech");
+            SceneManager.LoadScene(2);
+        }
+        // print(currentSpeakingSentence);
+        // foreach (string vocab in vocabsInLine)
+        // {
+        //     print(vocab + vocabsInLine.IndexOf(vocab));
+        // }
+        //
+        // foreach (string vocabu in vocabSpoken)
+        // {
+        //     print("spoken: " + vocabu + vocabsInLine.IndexOf(vocabu));
+        // }
     }
 
     void CountDownTime()
@@ -179,6 +247,7 @@ public class GameManager : MonoBehaviour
         if (mentalCapacity >= 1)
         {
             mentalCapacity -= 1;
+            mentalCapacityText.color = Color.black;
             foreach (GameObject button in purchaseButton)
             {
                 button.SetActive(true);
@@ -190,6 +259,7 @@ public class GameManager : MonoBehaviour
         else
         {
             Debug.Log("Not Enough Capacity");
+            mentalCapacityText.color = Color.red;
         }
     }
     
@@ -201,6 +271,7 @@ public class GameManager : MonoBehaviour
         if (price <= mentalCapacity && vocabsOwnedQuantity < 8) 
         {
             mentalCapacity -= price;
+            mentalCapacityText.color = Color.black;
             EventSystem.current.currentSelectedGameObject.SetActive(false);
             foreach (GameObject button in speakButton)
             {
@@ -216,6 +287,7 @@ public class GameManager : MonoBehaviour
         else
         {
             Debug.Log("Not Enough Capacity or Slots");
+            mentalCapacityText.color = Color.red;
         }
     }
 
@@ -223,7 +295,10 @@ public class GameManager : MonoBehaviour
     {
         string clickedButtonText =
             EventSystem.current.currentSelectedGameObject.GetComponentInChildren<TextMeshProUGUI>().text;
-        vocabSpoken.Add(clickedButtonText);
+        if (!blankingVocab1.ContainsKey(clickedButtonText))
+        {
+            vocabSpoken.Add(clickedButtonText);
+        }
         EventSystem.current.currentSelectedGameObject.SetActive(false);
         vocabsOwnedQuantity -= 1;
         if (blankingVocab1.ContainsKey(clickedButtonText))
