@@ -45,74 +45,82 @@ public class GameManager : MonoBehaviour
     private float timeLeft;
 
     private List<string> vocabSpoken;
-
-    // Start is called before the first frame update
+    
     private void Awake()
     {
-        instance = this;
+        instance = this; //set Game Manager to Singleton
     }
 
     void Start()
     {
-        mentalCapacity = initialMentalCapacity;
+        mentalCapacity = initialMentalCapacity; //set MC to initial MC
+        
+        //set list/dict
         vocabForPurchase1 = new Dictionary<string, int>();
         blankingVocab1 = new Dictionary<string, int>();
         vocabSpoken = new List<string>();
-        progressBar = GameObject.Find("Fill").GetComponent<RectTransform>();
-        timeLeft = timeForEachVocab;
+        
+        progressBar = GameObject.Find("Fill").GetComponent<RectTransform>(); //get progress bar
+        
+        timeLeft = timeForEachVocab; //set timer
         
         DisassembleSpeech();
         AddBlankingVocabs();
         
+        //set a 5 button purchaseButton array
         purchaseButton = new GameObject[5];
         purchaseButton = GameObject.FindGameObjectsWithTag("Purchase Button");
         foreach (GameObject button in purchaseButton)
         {
             button.GetComponentInChildren<TextMeshProUGUI>().text = "";
-        }
+        } 
         
+        //set a 8 button speakButton array
         speakButton = new GameObject[8];
         speakButton = GameObject.FindGameObjectsWithTag("Speak Button");
         foreach (GameObject button in speakButton)
         {
             button.SetActive(false);
-        }
-        // Debug.Log(speakButton[7]);
-        
+        } 
         foreach (GameObject button in speakButton)
         {
             button.GetComponentInChildren<TextMeshProUGUI>().text = "";
         }
         
+        //set TMProUGUI
         mentalCapacityText = GameObject.FindWithTag("Mental Capacity Text").GetComponent<TextMeshProUGUI>();
         speechBox = GameObject.Find("Speech Box").GetComponent<TextMeshProUGUI>();
         targetSentenceText = GameObject.Find("Target Sentence").GetComponent<TextMeshProUGUI>();
         
+        //set vocab pool
         Refresh();
         mentalCapacity += 1;
         
         
     }
-
-    // Update is called once per frame
+    
     void Update()
     {
+        //restart shortcut
         if (Input.GetKeyDown(KeyCode.R))
         {
             SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
         }
+        
+        //losing condition
         if (timeLeft <= 0)
         {
             Debug.Log("Game Over!");
             SceneManager.LoadScene(1);
             return;
         }
+        
         CountDownTime();
         DisplayResources();
         DisplayTargetSentence();
     }
 
-    void DisassembleSpeech()
+    void DisassembleSpeech()  //disassemble the speech text file into vocabForPurchase1 dict
     {
         TextAsset speechText = Resources.Load<TextAsset>("speech1");
         string[] speechLines = speechText.text.Split("\n");
@@ -144,7 +152,7 @@ public class GameManager : MonoBehaviour
         // Debug.Log(VocabForPurchase1.Keys);
     }
 
-    private void AddBlankingVocabs()
+    private void AddBlankingVocabs() //set blanking vocabs dict and merge it with purchase dict
     {
         blankingVocab1.Add("like", 0);
         // blankingVocab1.Add("for example", 0);
@@ -164,7 +172,7 @@ public class GameManager : MonoBehaviour
         mentalCapacityText.text = "Mental Capacity: " + mentalCapacity.ToString();
     }
 
-    void DisplaySentence(string vocab)
+    void DisplaySentence(string vocab) //add space and , for different vocabs
     {
         if (blankingVocab1.ContainsKey(vocab)) 
         {
@@ -192,7 +200,7 @@ public class GameManager : MonoBehaviour
         // }
         //
         // vocabSpokenWithoutBlanking = vocabSpoken;
-        targetSentenceText.text = speechLines[currentSpeakingSentence];
+        targetSentenceText.text = speechLines[currentSpeakingSentence]; //set target sentence text
         
         string[] vocabs = speechLines[currentSpeakingSentence].Split(" ");
         for (int i = 0; i < vocabs.Length; i++) 
@@ -209,17 +217,17 @@ public class GameManager : MonoBehaviour
                 vocab = vocab.Substring(0, vocab.Length - 2);
                 // Debug.Log(vocab);
             }
-            vocabsInLine.Add(vocab.ToLower());
+            vocabsInLine.Add(vocab.ToLower()); //set target sentence vocab list
         }
         
-        if (vocabsInLine.SequenceEqual(vocabSpoken, StringComparer.Ordinal))
+        if (vocabsInLine.SequenceEqual(vocabSpoken, StringComparer.Ordinal)) //compare spoken list and target list, if same, go to next sentence
         {
             currentSpeakingSentence += 1;
             vocabSpoken.Clear();
             speechBox.text = "";
         }
 
-        if (currentSpeakingSentence >= speechLines.Length)
+        if (currentSpeakingSentence >= speechLines.Length) //if finished all sentences, wins
         {
             Debug.Log("A successful speech");
             SceneManager.LoadScene(2);
@@ -236,13 +244,13 @@ public class GameManager : MonoBehaviour
         // }
     }
 
-    void CountDownTime()
+    void CountDownTime() //timer and timer bar
     {
         timeLeft -= Time.deltaTime;
         progressBar.localScale = new Vector3(timeLeft / timeForEachVocab, 1, 1);
     }
 
-    public void Refresh()
+    public void Refresh() //click brainstorm button to refresh pool
     {
         if (mentalCapacity >= 1)
         {
@@ -263,7 +271,7 @@ public class GameManager : MonoBehaviour
         }
     }
     
-    public void Buy()
+    public void Buy() //click on purchase button to buy vocabs
     {
         string clickedButtonText =
             EventSystem.current.currentSelectedGameObject.GetComponentInChildren<TextMeshProUGUI>().text;
@@ -291,7 +299,7 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    public void PlayHand()
+    public void PlayHand() //click on speak button to say the vocab
     {
         string clickedButtonText =
             EventSystem.current.currentSelectedGameObject.GetComponentInChildren<TextMeshProUGUI>().text;
